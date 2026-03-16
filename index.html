@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AMZ Prep — Freight RFQ</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --orange: #FF6B00; --orange-dark: #CC5500; --orange-light: #FFF0E6;
+    --green: #1D9E75; --green-light: #E1F5EE;
+    --amber: #BA7517; --amber-light: #FAEEDA;
+    --red: #A32D2D; --red-light: #FCEBEB;
+    --blue: #185FA5; --blue-light: #E6F1FB;
+    --text: #1a1a18; --text-2: #5a5a56; --text-3: #9a9a94;
+    --bg: #f5f4f0; --surface: #ffffff;
+    --border: rgba(0,0,0,0.1); --border-2: rgba(0,0,0,0.18);
+    --radius: 10px; --radius-lg: 14px;
+  }
+  html { background: var(--bg); }
+  body { font-family: 'DM Sans', sans-serif; color: var(--text); min-height: 100vh; }
+
+  .header {
+    background: var(--text); padding: 0 2rem;
+    display: flex; align-items: center; height: 56px;
+    position: sticky; top: 0; z-index: 100; gap: 14px;
+  }
+  .logo-badge { background: var(--orange); color: #fff; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; padding: 4px 10px; border-radius: 6px; }
+  .header-title { color: rgba(255,255,255,0.45); font-size: 13px; }
+
+  .page { padding: 2rem; max-width: 760px; margin: 0 auto; }
+  .page-header { margin-bottom: 1.5rem; }
+  .page-header h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .page-header p { font-size: 13px; color: var(--text-2); }
+
+  .section-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+  .section-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); margin-bottom: 14px; }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; color: var(--text-2); font-weight: 500; }
+  .field input, .field select, .field textarea {
+    font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text);
+    background: var(--bg); border: 0.5px solid var(--border-2);
+    border-radius: var(--radius); padding: 8px 11px; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s; width: 100%;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,0,0.12);
+  }
+  .field textarea { resize: vertical; min-height: 72px; }
+  .divider { height: 0.5px; background: var(--border); margin: 14px 0; }
+
+  .urgency-row { display: flex; gap: 10px; }
+  .urgency-btn {
+    flex: 1; padding: 9px 0; border: 0.5px solid var(--border-2);
+    border-radius: var(--radius); background: var(--surface);
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    color: var(--text-2); transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+  }
+  .urgency-btn:hover { background: var(--bg); }
+  .urgency-btn.selected.low    { border-color: var(--green); color: var(--green); background: var(--green-light); }
+  .urgency-btn.selected.medium { border-color: var(--amber); color: var(--amber); background: var(--amber-light); }
+  .urgency-btn.selected.high   { border-color: var(--red);   color: var(--red);   background: var(--red-light); }
+
+  .toggle-group { display: flex; gap: 20px; flex-wrap: wrap; }
+  .toggle-item { display: flex; flex-direction: column; gap: 8px; }
+  .toggle-label-text { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); }
+  .toggle-pair { display: flex; gap: 6px; }
+  .toggle {
+    padding: 5px 14px; border: 0.5px solid var(--border-2); border-radius: 999px;
+    font-size: 12px; font-weight: 500; cursor: pointer;
+    background: var(--surface); color: var(--text-2); transition: all 0.15s; user-select: none;
+  }
+  .toggle:hover { background: var(--bg); }
+  .toggle.yes { border-color: var(--green); color: var(--green); background: var(--green-light); }
+  .toggle.no  { border-color: var(--border-2); color: var(--text-3); background: var(--bg); }
+
+  .meta-row { display: flex; gap: 12px; margin-bottom: 1rem; }
+  .meta-row .field { flex: 1; }
+
+  /* ── MULTI-DROP ── */
+  .drop-block {
+    background: var(--bg); border: 0.5px solid var(--border-2);
+    border-radius: var(--radius-lg); padding: 1rem 1.25rem;
+    margin-top: 12px; position: relative;
+  }
+  .drop-block-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--orange); margin-bottom: 10px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .drop-remove {
+    background: none; border: none; cursor: pointer; font-size: 18px;
+    color: var(--text-3); line-height: 1; padding: 0; transition: color 0.15s;
+  }
+  .drop-remove:hover { color: var(--red); }
+  .add-drop-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 16px; border: 0.5px dashed var(--border-2);
+    border-radius: var(--radius); background: transparent;
+    font-size: 13px; font-weight: 500; color: var(--text-2);
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s; margin-top: 12px; width: 100%;
+    justify-content: center;
+  }
+  .add-drop-btn:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-light); }
+  .add-drop-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .add-drop-btn .plus { font-size: 18px; line-height: 1; }
+
+  /* ── BUTTONS ── */
+  .btn-row { display: flex; gap: 10px; margin-top: 1.5rem; }
+  .btn-primary {
+    flex: 1; padding: 12px; border: none; border-radius: var(--radius);
+    background: var(--orange); color: #fff; font-size: 15px; font-weight: 600;
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: background 0.15s, transform 0.1s; letter-spacing: 0.01em;
+  }
+  .btn-primary:hover { background: var(--orange-dark); }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { background: var(--text-3); cursor: not-allowed; transform: none; }
+  .btn-secondary {
+    padding: 12px 18px; border: 0.5px solid var(--border-2);
+    border-radius: var(--radius); background: var(--surface);
+    color: var(--text); font-size: 14px; font-weight: 500;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s;
+  }
+  .btn-secondary:hover { background: var(--bg); }
+
+  .toast {
+    margin-top: 14px; padding: 12px 16px; border-radius: var(--radius);
+    font-size: 13px; font-weight: 500; text-align: center;
+    opacity: 0; transition: opacity 0.3s; display: none;
+  }
+  .toast.success { background: var(--green-light); color: var(--green); border: 0.5px solid var(--green); display: block; }
+  .toast.error   { background: var(--red-light);   color: var(--red);   border: 0.5px solid var(--red);   display: block; }
+  .toast.show    { opacity: 1; }
+
+  /* ── SETUP BANNER (remove after configuring EmailJS) ── */
+  .setup-banner {
+    background: var(--amber-light); border: 0.5px solid var(--amber);
+    border-radius: var(--radius); padding: 12px 16px; margin-bottom: 1.5rem;
+    font-size: 13px; color: #5c3d08; line-height: 1.6;
+  }
+  .setup-banner strong { font-weight: 600; }
+  .setup-banner code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .setup-banner.hidden { display: none; }
+
+  @media (max-width: 560px) {
+    .field-grid { grid-template-columns: 1fr; }
+    .urgency-row { flex-direction: column; }
+    .meta-row { flex-direction: column; }
+    .page { padding: 1.25rem 1rem; }
+    .header { padding: 0 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="logo-badge">AMZ PREP</span>
+  <span class="header-title">Freight RFQ</span>
+</div>
+
+<div class="page">
+
+  <!-- ── SETUP BANNER — remove this div after configuring EmailJS ── -->
+  <div class="setup-banner" id="setup-banner">
+    <strong>Setup required:</strong> Open this file and replace the three placeholders at the top of the &lt;script&gt; tag:<br>
+    <code>EMAILJS_PUBLIC_KEY</code> · <code>EMAILJS_SERVICE_ID</code> · <code>EMAILJS_TEMPLATE_ID</code><br>
+    See <strong>README.md</strong> for step-by-step instructions.
+  </div>
+
+  <div class="page-header">
+    <h1>Freight Quote Request</h1>
+    <p>Complete the form below and submit — your request will be sent immediately.</p>
+  </div>
+
+  <!-- SUBMITTED BY -->
+  <div class="section-card">
+    <div class="section-label">Submitted by</div>
+    <div class="field-grid">
+      <div class="field"><label>Your name</label><input type="text" id="sender-name" placeholder="e.g. Joel" /></div>
+      <div class="field"><label>Position / title</label><input type="text" id="sender-position" placeholder="e.g. Logistics Coordinator" /></div>
+      <div class="field"><label>Company / client</label><input type="text" id="sender-company" placeholder="e.g. Acme Co." /></div>
+      <div class="field"><label>Email address</label><input type="email" id="sender-email" placeholder="e.g. joel@acme.com" /></div>
+      <div class="field"><label>Phone number</label><input type="tel" id="sender-phone" placeholder="e.g. 416-555-0100" /></div>
+      <div class="field"><label>Address</label><input type="text" id="sender-address" placeholder="e.g. 123 Main St, Toronto, ON" /></div>
+    </div>
+  </div>
+
+  <!-- URGENCY -->
+  <div class="section-card">
+    <div class="section-label">Urgency</div>
+    <div class="urgency-row">
+      <button class="urgency-btn low"    onclick="selectUrgency(this,'low')">Standard</button>
+      <button class="urgency-btn medium" onclick="selectUrgency(this,'medium')">Expedited</button>
+      <button class="urgency-btn high"   onclick="selectUrgency(this,'high')">Hot / ASAP</button>
+    </div>
+  </div>
+
+  <!-- DATE / TIME -->
+  <div class="meta-row">
+    <div class="field"><label>Date of request</label><input type="date" id="req-date" /></div>
+    <div class="field"><label>Time of request</label><input type="time" id="req-time" /></div>
+  </div>
+
+  <!-- ORIGIN & DESTINATION -->
+  <div class="section-card">
+    <div class="section-label">Origin & Destination</div>
+
+    <!-- Shipment type -->
+    <div style="margin-bottom: 14px;">
+      <div class="toggle-label-text" style="margin-bottom: 8px;">Shipment type</div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <span class="toggle shiptype-btn" id="type-ca" onclick="selectShipType('CA')">Domestic Canada</span>
+        <span class="toggle shiptype-btn" id="type-us" onclick="selectShipType('US')">Domestic USA</span>
+        <span class="toggle shiptype-btn" id="type-xb" onclick="selectShipType('XB')">Cross-Border</span>
+      </div>
+    </div>
+
+    <!-- Customs broker (Cross-Border only) -->
+    <div id="customs-section" style="display:none; margin-bottom: 14px;">
+      <div style="background: var(--blue-light); border: 0.5px solid var(--blue); border-radius: var(--radius); padding: 1rem 1.25rem;">
+        <div class="toggle-label-text" style="color: var(--blue); margin-bottom: 12px;">Customs Broker</div>
+        <div class="field-grid">
+          <div class="field"><label>Broker name</label><input type="text" id="broker-name" placeholder="e.g. John Smith" /></div>
+          <div class="field"><label>Broker phone</label><input type="tel" id="broker-phone" placeholder="e.g. 416-555-0100" /></div>
+        </div>
+        <div class="field" style="margin-top: 10px;"><label>Broker email</label><input type="email" id="broker-email" placeholder="e.g. broker@customsco.com" /></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Pickup -->
+    <div class="field-grid" style="margin-bottom: 12px;">
+      <div class="field"><label>Pickup — City / State / Zip</label><input type="text" id="origin" placeholder="e.g. Chicago, IL 60601" /></div>
+      <div class="field"><label>Delivery — City / State / Zip</label><input type="text" id="dest-1" placeholder="e.g. Atlanta, GA 30301" /></div>
+    </div>
+
+    <!-- Multiple drops toggle -->
+    <div class="divider"></div>
+    <div class="toggle-group" style="margin-bottom: 0;">
+      <div class="toggle-item">
+        <div class="toggle-label-text">Multiple drops?</div>
+        <div class="toggle-pair">
+          <span class="toggle" id="multi-yes" onclick="toggleMultiDrop(true)">Yes</span>
+          <span class="toggle" id="multi-no"  onclick="toggleMultiDrop(false)">No</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Additional drop locations (hidden by default) -->
+    <div id="drops-container"></div>
+    <button class="add-drop-btn" id="add-drop-btn" onclick="addDrop()" style="display:none;" disabled>
+      <span class="plus">+</span> Add another drop location
+    </button>
+  </div>
+
+  <!-- SHIPMENT DETAILS -->
+  <div class="section-card">
+    <div class="section-label">Shipment Details</div>
+    <div class="field-grid">
+      <div class="field"><label>Commodity type</label><input type="text" id="commodity" placeholder="e.g. General freight, electronics" /></div>
+      <div class="field"><label>Pallet count / pieces</label><input type="text" id="pallets" placeholder="e.g. 4 pallets, 48 pieces" /></div>
+      <div class="field"><label>Total weight</label><input type="text" id="weight" placeholder="e.g. 1,200 lbs" /></div>
+    </div>
+    <div class="divider"></div>
+    <div class="toggle-group">
+      <div class="toggle-item">
+        <div class="toggle-label-text">Stackable?</div>
+        <div class="toggle-pair">
+          <span class="toggle" onclick="pickToggle(this,'stackable','yes')">Yes</span>
+          <span class="toggle" onclick="pickToggle(this,'stackable','no')">No</span>
+        </div>
+      </div>
+      <div class="toggle-item">
+        <div class="toggle-label-text">Hazardous materials?</div>
+        <div class="toggle-pair">
+          <span class="toggle" onclick="pickToggle(this,'hazmat','yes')">Yes</span>
+          <span class="toggle" onclick="pickToggle(this,'hazmat','no')">No</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EQUIPMENT & ACCESSORIALS -->
+  <div class="section-card">
+    <div class="section-label">Equipment & Accessorials</div>
+    <div class="field-grid" style="margin-bottom:14px;">
+      <div class="field">
+        <label>Equipment type</label>
+        <select id="equip">
+          <option value="">Select...</option>
+          <option>Dry Van (53')</option>
+          <option>Flatbed</option>
+          <option>Reefer</option>
+          <option>LTL</option>
+          <option>Step Deck</option>
+          <option>Hotshot</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="toggle-group">
+      <div class="toggle-item">
+        <div class="toggle-label-text">Liftgate required?</div>
+        <div class="toggle-pair">
+          <span class="toggle" onclick="pickToggle(this,'liftgate','yes')">Yes</span>
+          <span class="toggle" onclick="pickToggle(this,'liftgate','no')">No</span>
+        </div>
+      </div>
+      <div class="toggle-item">
+        <div class="toggle-label-text">Residential delivery?</div>
+        <div class="toggle-pair">
+          <span class="toggle" onclick="pickToggle(this,'residential','yes')">Yes</span>
+          <span class="toggle" onclick="pickToggle(this,'residential','no')">No</span>
+        </div>
+      </div>
+      <div class="toggle-item">
+        <div class="toggle-label-text">Appointment required?</div>
+        <div class="toggle-pair">
+          <span class="toggle" onclick="pickToggle(this,'appt','yes')">Yes</span>
+          <span class="toggle" onclick="pickToggle(this,'appt','no')">No</span>
+        </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="field">
+      <label>Special instructions / notes</label>
+      <textarea id="special" placeholder="e.g. White glove delivery, dock hours 8am–4pm..."></textarea>
+    </div>
+  </div>
+
+  <!-- SCHEDULE -->
+  <div class="section-card">
+    <div class="section-label">Schedule</div>
+    <div class="field-grid">
+      <div class="field"><label>Ready date / time</label><input type="datetime-local" id="ready" /></div>
+      <div class="field"><label>Target delivery date</label><input type="date" id="delivery" /></div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-primary" id="submit-btn" onclick="submitRFQ()">Submit Request</button>
+    <button class="btn-secondary" onclick="resetForm()" style="color: var(--red);">Clear</button>
+  </div>
+  <div class="toast" id="toast"></div>
+
+</div><!-- /page -->
+
+<script>
+  // ══════════════════════════════════════════════════════════════
+  //  EMAILJS CONFIG — replace these three values after setup
+  //  See README.md for instructions
+  // ══════════════════════════════════════════════════════════════
+  const EMAILJS_PUBLIC_KEY   = 'FpMPl-twytIRLaRCK';
+  const EMAILJS_SERVICE_ID   = 'joel@amzprep.com';
+  const EMAILJS_TEMPLATE_ID  = 'Freight V1';
+  // ══════════════════════════════════════════════════════════════
+
+  // Hide setup banner if keys are filled in
+  if (EMAILJS_PUBLIC_KEY !== 'YOUR_PUBLIC_KEY') {
+    document.getElementById('setup-banner').classList.add('hidden');
+  }
+
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+
+  // ── STATE ──
+  const state = { urgency:'', stackable:'', hazmat:'', liftgate:'', residential:'', appt:'', multiDrop: false, shipType: '' };
+  let dropCount = 0;
+  const MAX_DROPS = 4; // dest-1 is always shown, so 4 extras = 5 total
+
+  // ── URGENCY ──
+  function selectUrgency(btn, val) {
+    document.querySelectorAll('.urgency-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.shiptype-btn').forEach(b => b.classList.remove('yes','no'));
+    document.getElementById('customs-section').style.display = 'none';
+    btn.classList.add('selected');
+    state.urgency = val === 'low' ? 'Standard' : val === 'medium' ? 'Expedited' : 'Hot / ASAP';
+  }
+
+  // ── SHIP TYPE ──
+  function selectShipType(val) {
+    state.shipType = val;
+    ['CA','US','XB'].forEach(t => {
+      const el = document.getElementById('type-' + t.toLowerCase());
+      el.classList.remove('yes','no');
+      if (t === val) el.classList.add('yes');
+    });
+    document.getElementById('customs-section').style.display = val === 'XB' ? 'block' : 'none';
+    if (val !== 'XB') {
+      ['broker-name','broker-phone','broker-email'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+    }
+  }
+
+  // ── TOGGLES ──
+  function pickToggle(el, group, val) {
+    el.closest('.toggle-pair').querySelectorAll('.toggle').forEach(t => t.classList.remove('yes','no'));
+    el.classList.add(val);
+    state[group] = val === 'yes' ? 'Yes' : 'No';
+  }
+
+  // ── MULTI-DROP ──
+  function toggleMultiDrop(yes) {
+    state.multiDrop = yes;
+    document.getElementById('multi-yes').className = 'toggle' + (yes ? ' yes' : '');
+    document.getElementById('multi-no').className  = 'toggle' + (!yes ? ' no' : '');
+
+    const addBtn = document.getElementById('add-drop-btn');
+    const container = document.getElementById('drops-container');
+
+    if (yes) {
+      addBtn.style.display = 'flex';
+      if (dropCount === 0) addDrop(); // auto-add first extra drop
+      updateAddBtn();
+    } else {
+      addBtn.style.display = 'none';
+      container.innerHTML = '';
+      dropCount = 0;
+    }
+  }
+
+  function addDrop() {
+    if (dropCount >= MAX_DROPS - 1) return; // dest-1 + 4 extras = 5 total
+    dropCount++;
+    const num = dropCount + 1; // Drop 2, 3, 4, 5
+    const container = document.getElementById('drops-container');
+    const block = document.createElement('div');
+    block.className = 'drop-block';
+    block.id = `drop-block-${dropCount}`;
+    block.innerHTML = `
+      <div class="drop-block-label">
+        <span>Drop ${num}</span>
+        <button class="drop-remove" onclick="removeDrop(${dropCount})" title="Remove">×</button>
+      </div>
+      <div class="field">
+        <label>Delivery address — City / State / Zip</label>
+        <input type="text" id="dest-${num}" placeholder="e.g. Dallas, TX 75201" />
+      </div>`;
+    container.appendChild(block);
+    updateAddBtn();
+  }
+
+  function removeDrop(id) {
+    const block = document.getElementById(`drop-block-${id}`);
+    if (block) block.remove();
+    // Renumber remaining
+    dropCount = 0;
+    document.querySelectorAll('.drop-block').forEach(b => {
+      dropCount++;
+      const num = dropCount + 1;
+      b.id = `drop-block-${dropCount}`;
+      b.querySelector('.drop-block-label span').textContent = `Drop ${num}`;
+      b.querySelector('.drop-remove').setAttribute('onclick', `removeDrop(${dropCount})`);
+      b.querySelector('input').id = `dest-${num}`;
+    });
+    updateAddBtn();
+  }
+
+  function updateAddBtn() {
+    const btn = document.getElementById('add-drop-btn');
+    const total = 1 + dropCount; // dest-1 always exists
+    btn.disabled = total >= 5;
+    btn.textContent = total >= 5 ? 'Maximum 5 drop locations reached' : '+ Add another drop location';
+    if (total >= 5) {
+      btn.querySelector = null; // prevent inner span issue
+      btn.innerHTML = 'Maximum 5 drop locations reached';
+    } else {
+      btn.innerHTML = '<span class="plus">+</span> Add another drop location';
+    }
+  }
+
+  // ── HELPERS ──
+  function fmtDateTime(val) {
+    if (!val) return '—';
+    try { return new Date(val).toLocaleString('en-US', { dateStyle:'medium', timeStyle:'short' }); } catch { return val; }
+  }
+  function fmtDate(val) {
+    if (!val) return '—';
+    try { return new Date(val + 'T12:00:00').toLocaleDateString('en-US', { dateStyle:'medium' }); } catch { return val; }
+  }
+  function v(id) {
+    const el = document.getElementById(id);
+    return el ? (el.value.trim() || '—') : '—';
+  }
+
+  // ── BUILD EMAIL BODY ──
+  function buildBody() {
+    const rawOrigin = document.getElementById('origin')?.value?.trim();
+    const rawDest1  = document.getElementById('dest-1')?.value?.trim();
+    const origin    = rawOrigin || 'Origin TBD';
+    const dest1     = rawDest1  || 'Destination TBD';
+    const urgency   = state.urgency || 'Standard';
+
+    const sender   = v('sender-name');
+    const company  = v('sender-company');
+    const fromLine = sender !== '—' ? `${sender}${company !== '—' ? ' — ' + company : ''}` : '—';
+    const senderPosition = v('sender-position');
+    const senderEmail    = v('sender-email');
+    const senderPhone    = v('sender-phone');
+    const senderAddress  = v('sender-address');
+    const reqDate  = v('req-date');
+    const reqTime  = v('req-time');
+    const dateStr  = reqDate !== '—' ? fmtDate(reqDate) + (reqTime !== '—' ? ' at ' + reqTime : '') : '—';
+
+    // Build delivery lines
+    let deliveryLines = [`   Drop 1:   ${dest1}`];
+    if (state.multiDrop) {
+      document.querySelectorAll('.drop-block').forEach((b, i) => {
+        const num = i + 2;
+        const val = document.getElementById(`dest-${num}`)?.value?.trim() || '—';
+        deliveryLines.push(`   Drop ${num}:   ${val}`);
+      });
+    }
+
+    const typeTag  = state.shipType === 'CA' ? '[CA]' : state.shipType === 'US' ? '[US]' : state.shipType === 'XB' ? '[Cross-Border]' : '';
+    const base    = `RFQ ${typeTag ? typeTag + ' ' : ''}– ${origin} → ${dest1}${dropCount > 0 ? ` (+${dropCount} drop${dropCount > 1 ? 's' : ''})` : ''}`;
+    const subject = urgency === 'Hot / ASAP' ? `[URGENT] ${base}` : urgency === 'Expedited' ? `[Expedited] ${base}` : base;
+
+    const shipTypeLabel = state.shipType === 'CA' ? 'Domestic Canada' : state.shipType === 'US' ? 'Domestic USA' : state.shipType === 'XB' ? 'Cross-Border' : '—';
+    const brokerName  = state.shipType === 'XB' ? (document.getElementById('broker-name')?.value?.trim()  || '—') : null;
+    const brokerPhone = state.shipType === 'XB' ? (document.getElementById('broker-phone')?.value?.trim() || '—') : null;
+    const brokerEmail = state.shipType === 'XB' ? (document.getElementById('broker-email')?.value?.trim() || '—') : null;
+
+    const lines = [
+      'FREIGHT QUOTATION REQUEST (RFQ)',
+      'AMZ Prep Fulfillment',
+      '',
+      `Shipment Type: ${shipTypeLabel}`,
+      ...(state.shipType === 'XB' ? [
+        `Customs Broker:`,
+        `   Name:   ${brokerName}`,
+        `   Phone:  ${brokerPhone}`,
+        `   Email:  ${brokerEmail}`,
+      ] : []),
+      `Submitted by: ${fromLine}`,
+      ...(senderPosition !== '—' ? [`   Position:  ${senderPosition}`] : []),
+      ...(senderEmail    !== '—' ? [`   Email:     ${senderEmail}`]    : []),
+      ...(senderPhone    !== '—' ? [`   Phone:     ${senderPhone}`]    : []),
+      ...(senderAddress  !== '—' ? [`   Address:   ${senderAddress}`]  : []),
+      `Urgency: ${urgency}`,
+      `Date/Time of Request: ${dateStr}`,
+      '',
+      '1. ORIGIN & DESTINATION',
+      `   Pickup:    ${origin}`,
+      ...deliveryLines,
+      '',
+      '2. SHIPMENT DETAILS',
+      `   Commodity:     ${v('commodity')}`,
+      `   Pallet/Pieces: ${v('pallets')}`,
+      `   Total Weight:  ${v('weight')}`,
+      `   Stackable:     ${state.stackable || '—'}`,
+      `   Hazmat:        ${state.hazmat || '—'}`,
+      '',
+      '3. EQUIPMENT & ACCESSORIALS',
+      `   Equipment Type:       ${v('equip')}`,
+      `   Liftgate Required:    ${state.liftgate || '—'}`,
+      `   Residential Delivery: ${state.residential || '—'}`,
+      `   Appointment Required: ${state.appt || '—'}`,
+      `   Special Instructions: ${v('special')}`,
+      '',
+      '4. SCHEDULE',
+      `   Ready Date/Time:  ${fmtDateTime(document.getElementById('ready')?.value)}`,
+      `   Target Delivery:  ${fmtDate(v('delivery'))}`,
+      '',
+      '---',
+      'Sent via AMZ Prep Fulfillment',
+    ];
+
+    return { subject, body: lines.join('\n') };
+  }
+
+  // ── SUBMIT ──
+  async function submitRFQ() {
+    if (EMAILJS_PUBLIC_KEY === 'YOUR_PUBLIC_KEY') {
+      showToast('EmailJS not configured yet. See setup banner above.', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    const { subject, body } = buildBody();
+
+    try {
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        subject: subject,
+        message: body,
+        sender_email: document.getElementById('sender-email')?.value?.trim() || '',
+      });
+      showToast('Request submitted successfully. You\'ll hear back shortly.', 'success');
+      setTimeout(resetForm, 1500);
+    } catch (err) {
+      console.error('EmailJS error:', err);
+      showToast('Failed to send. Please try again or contact freight@amzprep.com directly.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Submit Request';
+    }
+  }
+
+  // ── RESET ──
+  function resetForm() {
+    ['sender-name','sender-position','sender-company','sender-email','sender-phone','sender-address','origin','dest-1','commodity','pallets','weight','special','broker-name','broker-phone','broker-email'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('equip').value = '';
+    document.getElementById('ready').value = '';
+    document.getElementById('delivery').value = '';
+    document.getElementById('req-date').valueAsDate = new Date();
+    document.getElementById('req-time').value = new Date().toTimeString().slice(0,5);
+    document.querySelectorAll('.urgency-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.toggle').forEach(t => t.classList.remove('yes','no'));
+    Object.keys(state).forEach(k => { state[k] = k === 'multiDrop' ? false : ''; });
+    document.getElementById('drops-container').innerHTML = '';
+    document.getElementById('add-drop-btn').style.display = 'none';
+    dropCount = 0;
+  }
+
+  function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    if (type === 'error') setTimeout(() => { t.className = 'toast'; }, 6000);
+  }
+
+  // ── INIT ──
+  document.getElementById('req-date').valueAsDate = new Date();
+  document.getElementById('req-time').value = new Date().toTimeString().slice(0,5);
+</script>
+</body>
+</html>
